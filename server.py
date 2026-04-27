@@ -246,5 +246,5 @@ def get_session_logs(session_id):
 
 
 if __name__ == "__main__":
-    print("🚀 LinkedIn Automation API running on http://localhost:5000")
+    print("LinkedIn Automation API running on http://localhost:5000")
     app.run(debug=False, host="0.0.0.0", port=5000)
