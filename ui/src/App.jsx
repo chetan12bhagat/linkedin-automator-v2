@@ -631,7 +631,7 @@ export default function App() {
             <div>
               <p className="text-sm text-amber-300 font-semibold">Running in Demo Mode</p>
               <p className="text-xs text-amber-500/80 mt-1">
-                To use real automation, start the Python backend: <code className="bg-amber-500/10 px-1.5 py-0.5 rounded font-mono">cd backend && pip install -r requirements.txt && python server.py</code>
+                To use real automation, ensure your local server is running: <code className="bg-amber-500/10 px-1.5 py-0.5 rounded font-mono">python server.py</code>
               </p>
             </div>
           </div>
