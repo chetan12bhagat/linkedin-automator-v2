@@ -35,7 +35,7 @@ const Icon = ({ name, size = 18, className = "" }) => {
 };
 
 // ─── API Client ───────────────────────────────────────────────────────────────
-const API_BASE = "http://localhost:5000/api";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000/api";
 
 const api = {
   getProfiles: () => fetch(`${API_BASE}/profiles`).then(r => r.json()),
