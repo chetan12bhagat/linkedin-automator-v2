@@ -532,6 +532,95 @@ const SessionMonitor = ({ sessionId, onClose }) => {
   );
 };
 
+// ─── OTP Lock Screen ──────────────────────────────────────────────────────────
+
+const OTPLock = ({ onUnlock }) => {
+  const [otp, setOtp] = useState(["", "", "", "", ""]);
+  const [error, setError] = useState(false);
+  const correctOtp = "84689";
+  const inputs = useRef([]);
+
+  const handleChange = (index, value) => {
+    if (!/^\d*$/.test(value)) return;
+    const newOtp = [...otp];
+    newOtp[index] = value.slice(-1);
+    setOtp(newOtp);
+    setError(false);
+
+    if (value && index < 4) {
+      inputs.current[index + 1].focus();
+    }
+  };
+
+  const handleKeyDown = (index, e) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      inputs.current[index - 1].focus();
+    }
+  };
+
+  const handleSubmit = () => {
+    if (otp.join("") === correctOtp) {
+      onUnlock();
+    } else {
+      setError(true);
+      setOtp(["", "", "", "", ""]);
+      inputs.current[0].focus();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-zinc-950 flex items-center justify-center p-4">
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-600/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+      </div>
+
+      <div className="relative w-full max-w-md bg-zinc-900/50 border border-zinc-800/50 backdrop-blur-xl rounded-[2.5rem] p-10 shadow-2xl text-center">
+        <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-blue-600/20">
+          <Icon name="linkedin" size={32} />
+        </div>
+        
+        <h1 className="text-2xl font-extrabold text-white mb-2">Security Verification</h1>
+        <p className="text-zinc-500 text-sm mb-8">Enter the 5-digit security code to access the automation dashboard</p>
+
+        <div className="flex justify-center gap-3 mb-8">
+          {otp.map((digit, i) => (
+            <input
+              key={i}
+              ref={el => inputs.current[i] = el}
+              type="text"
+              inputMode="numeric"
+              value={digit}
+              onChange={e => handleChange(i, e.target.value)}
+              onKeyDown={e => handleKeyDown(i, e)}
+              className={`w-12 h-16 bg-zinc-800/50 border-2 rounded-2xl text-center text-2xl font-bold text-white focus:outline-none transition-all ${error ? 'border-red-500/50 shake' : 'border-zinc-700/50 focus:border-blue-500/50 focus:bg-zinc-800'}`}
+            />
+          ))}
+        </div>
+
+        {error && <p className="text-red-400 text-xs font-semibold mb-6 uppercase tracking-wider animate-bounce">Invalid code. Please try again.</p>}
+
+        <button 
+          onClick={handleSubmit}
+          className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98]"
+        >
+          Unlock Dashboard
+        </button>
+
+        <style>{`
+          .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+          @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+          }
+        `}</style>
+      </div>
+    </div>
+  );
+};
+
 // ─── Main App ─────────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -542,6 +631,7 @@ export default function App() {
   const [editProfile, setEditProfile] = useState(null);
   const [activeSession, setActiveSession] = useState(null);
   const [backendOk, setBackendOk] = useState(null);
+  const [isUnlocked, setIsUnlocked] = useState(false);
 
   const loadProfiles = useCallback(async () => {
     try {
@@ -584,6 +674,8 @@ export default function App() {
     { id: "profiles", label: "Profiles", icon: "user" },
     { id: "history", label: "History", icon: "activity" },
   ];
+
+  if (!isUnlocked) return <OTPLock onUnlock={() => setIsUnlocked(true)} />;
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white" style={{ fontFamily: "'DM Sans', 'Inter', sans-serif" }}>
