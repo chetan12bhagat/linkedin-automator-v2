@@ -51,8 +51,32 @@ razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET)) i
 
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 
-with app.app_context():
-    db.create_all()
+def init_db():
+    with app.app_context():
+        try:
+            db.create_all()
+            return True
+        except Exception as e:
+            print(f"Database initialization error: {e}")
+            return False
+
+# Initial attempt
+init_db()
+
+# ---- Debug/Health Endpoint ----
+
+@app.route("/api/health", methods=["GET"])
+def health_check():
+    return jsonify({
+        "status": "ok",
+        "is_vercel": IS_VERCEL,
+        "database_uri": app.config['SQLALCHEMY_DATABASE_URI'],
+        "env_vars": {
+            "HAS_SECRET_KEY": bool(os.getenv('FLASK_SECRET_KEY')),
+            "HAS_GOOGLE_ID": bool(os.getenv('GOOGLE_CLIENT_ID')),
+            "HAS_RAZORPAY_KEY": bool(os.getenv('RAZORPAY_KEY_ID'))
+        }
+    })
 
 # ---- Auth Middleware ----
 
@@ -134,7 +158,11 @@ def google_auth():
             }
         })
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        import traceback
+        return jsonify({
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }), 500
 
 # ---- Payment Endpoints ----
 
