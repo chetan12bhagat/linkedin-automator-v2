@@ -16,6 +16,9 @@ from google.auth.transport import requests as google_requests
 from dotenv import load_dotenv
 import razorpay
 
+# Add current directory to path so imports work on Vercel
+sys.path.insert(0, os.path.dirname(__file__))
+
 from database import db
 from models import User, Profile, BotSession
 
@@ -24,8 +27,17 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
+# Detect Vercel environment
+IS_VERCEL = os.getenv('VERCEL') == '1'
+
 # Config
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///linkedin_bot.db'
+if IS_VERCEL:
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/linkedin_bot.db'
+    UPLOADS_DIR = "/tmp/uploads"
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///linkedin_bot.db'
+    UPLOADS_DIR = "uploads"
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'default-secret-key')
 
@@ -37,7 +49,6 @@ RAZORPAY_KEY_SECRET = os.getenv('RAZORPAY_KEY_SECRET')
 
 razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET)) if RAZORPAY_KEY_ID else None
 
-UPLOADS_DIR = "uploads"
 os.makedirs(UPLOADS_DIR, exist_ok=True)
 
 with app.app_context():
@@ -247,11 +258,12 @@ def start_bot(user):
     def run_bot(app_context, sess_id, p_dict, j_title, loc, flts, m_jobs):
         with app_context:
             try:
-                sys.path.insert(0, os.path.dirname(__file__))
+                # Import bot here to avoid issues with serverless context
                 from linkedin_bot import LinkedInBot
                 
                 def status_callback(message, level="info"):
-                    from database import db
+                    # We need a new session in each callback if it's threaded
+                    # But on Vercel, this thread will likely be killed
                     with app.app_context():
                         s = BotSession.query.get(sess_id)
                         if s:
@@ -300,6 +312,7 @@ def start_bot(user):
         "resume_path": profile.resume_path
     }
     
+    # WARNING: On Vercel, this thread will NOT persist after the response is sent.
     thread = threading.Thread(
         target=run_bot, 
         args=(app.app_context(), session_id, profile_dict, job_title, location, filters, max_jobs),
@@ -348,6 +361,6 @@ def get_session_logs(user, session_id):
     return jsonify(json.loads(s.logs or '[]'))
 
 
+# Standard Vercel entry point
 if __name__ == "__main__":
-    print("LinkedIn Automation API running on http://localhost:5000")
-    app.run(debug=False, host="0.0.0.0", port=5000)
+    app.run(debug=True, port=5000)
